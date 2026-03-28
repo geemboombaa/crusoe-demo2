@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRISM — Portfolio & Release Intelligence for Strategic Management</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f4f1;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: #e2e0d8;
+    --text: #1a1a18;
+    --text2: #5a5a52;
+    --text3: #9a9a8e;
+    --accent: #1a56db;
+    --accent2: #0e3fa8;
+    --green: #0d7c3d;
+    --green-bg: #eaf7ef;
+    --yellow: #92620a;
+    --yellow-bg: #fef9ec;
+    --red: #c0392b;
+    --red-bg: #fdf2f1;
+    --blue-bg: #eff4fe;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.05);
+    --shadow-lg: 0 4px 16px rgba(0,0,0,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 13px; line-height: 1.5; min-height: 100vh; }
+
+  /* HEADER */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-mark { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .logo-mark svg { width: 18px; height: 18px; fill: white; }
+  .logo-text { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+  .logo-sub { font-size: 10px; color: var(--text3); font-weight: 400; letter-spacing: 0.5px; text-transform: uppercase; margin-top: -2px; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .header-meta { font-size: 11px; color: var(--text3); }
+  .pulse-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; display: inline-block; margin-right: 5px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* TABS */
+  .tabs { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; gap: 0; }
+  .tab { padding: 14px 20px; font-size: 12.5px; font-weight: 500; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab-badge { background: var(--red); color: white; border-radius: 10px; padding: 1px 6px; font-size: 10px; margin-left: 6px; }
+
+  /* LAYOUT */
+  .content { padding: 20px 28px; max-width: 1600px; }
+  .pane { display: none; }
+  .pane.active { display: block; }
+
+  /* CARDS */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+  .card-title { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text2); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+
+  /* KPI STRIP */
+  .kpi-strip { display: grid; gap: 10px; margin-bottom: 18px; }
+  .kpi-strip-5 { grid-template-columns: repeat(5, 1fr); }
+  .kpi-strip-8 { grid-template-columns: repeat(8, 1fr); }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow); }
+  .kpi-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .kpi-value { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; color: var(--text); line-height: 1; }
+  .kpi-sub { font-size: 10px; color: var(--text3); margin-top: 3px; }
+  .kpi.red .kpi-value { color: var(--red); }
+  .kpi.green .kpi-value { color: var(--green); }
+  .kpi.yellow .kpi-value { color: var(--yellow); }
+
+  /* STATUS BADGES */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 10.5px; font-weight: 500; }
+  .badge-green { background: var(--green-bg); color: var(--green); }
+  .badge-yellow { background: var(--yellow-bg); color: var(--yellow); }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+  .badge-blue { background: var(--blue-bg); color: var(--accent); }
+  .badge-gray { background: var(--surface2); color: var(--text2); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .dot-green { background: var(--green); }
+  .dot-yellow { background: #e6a817; }
+  .dot-red { background: var(--red); }
+  .dot-blue { background: var(--accent); }
+  .dot-gray { background: var(--text3); }
+
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-danger { background: var(--red-bg); color: var(--red); border: 1px solid #f5c6c2; }
+  .btn-success { background: var(--green-bg); color: var(--green); border: 1px solid #b7e4cb; }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+  /* GRID LAYOUTS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .grid-60-40 { display: grid; grid-template-columns: 60fr 40fr; gap: 14px; }
+  .grid-40-60 { display: grid; grid-template-columns: 40fr 60fr; gap: 14px; }
+  .grid-65-35 { display: grid; grid-template-columns: 65fr 35fr; gap: 14px; }
+
+  /* ═══════════════════════════════════════════
+     UC1 — OKR ORACLE
+  ═══════════════════════════════════════════ */
+  .roadmap-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .toggle-group { display: flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+  .toggle-btn { padding: 6px 14px; font-size: 11.5px; cursor: pointer; background: var(--surface); border: none; font-family: 'DM Sans', sans-serif; color: var(--text2); transition: all 0.15s; }
+  .toggle-btn.active { background: var(--accent); color: white; }
+  .scenario-select { padding: 6px 12px; border: 1px solid var(--border); border-radius: 7px; font-size: 12px; font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--text); cursor: pointer; }
+
+  /* Roadmap canvas */
+  .roadmap-wrap { overflow-x: auto; }
+  .roadmap-table { width: 100%; border-collapse: collapse; min-width: 900px; }
+  .roadmap-table th { background: var(--surface2); font-size: 10px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 10px; border: 1px solid var(--border); text-align: center; }
+  .roadmap-table td { border: 1px solid var(--border); padding: 5px 8px; vertical-align: middle; font-size: 11px; height: 36px; }
+  .roadmap-table td.lane-label { font-weight: 600; font-size: 11px; color: var(--text2); background: var(--surface2); white-space: nowrap; min-width: 140px; }
+  .roadmap-table td.bucket-header { background: var(--text); color: white; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; text-align: center; }
+  .bar-wrap { position: relative; height: 26px; }
+  .rm-bar { position: absolute; height: 22px; border-radius: 5px; display: flex; align-items: center; padding: 0 8px; font-size: 10px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: filter 0.15s, transform 0.2s; top: 2px; }
+  .rm-bar:hover { filter: brightness(0.92); transform: translateY(-1px); }
+  .rm-bar.green { background: #c8f0d8; color: #0a6030; border: 1px solid #9de0b8; }
+  .rm-bar.yellow { background: #fef3cd; color: #7a500a; border: 1px solid #f8d77a; }
+  .rm-bar.red { background: #fde0de; color: #a0291e; border: 1px solid #f8b4ad; }
+  .rm-bar.blue { background: #ddeeff; color: #1040a0; border: 1px solid #aaccff; }
+  .rm-bar.gray { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  .rm-bar.conflict { animation: conflictPulse 1.5s infinite; }
+  @keyframes conflictPulse { 0%,100%{opacity:1} 50%{opacity:0.65} }
+
+  /* Dependency graph */
+  #dep-graph { width: 100%; height: 320px; }
+  #dep-graph svg { width: 100%; height: 100%; }
+
+  /* AI Oracle */
+  .oracle-box { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+  .oracle-prompt { width: 100%; border: 1px solid var(--border); border-radius: 7px; padding: 10px 12px; font-size: 12.5px; font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--text); resize: none; outline: none; margin-bottom: 10px; }
+  .oracle-prompt:focus { border-color: var(--accent); }
+  .oracle-response { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 14px; min-height: 80px; font-size: 12.5px; line-height: 1.7; color: var(--text); margin-top: 10px; display: none; }
+  .oracle-response.visible { display: block; }
+  .typing-cursor { display: inline-block; width: 2px; height: 14px; background: var(--accent); animation: blink 0.7s infinite; margin-left: 1px; vertical-align: middle; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  .scenario-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .scenario-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: var(--surface); }
+  .scenario-card h4 { font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+  .scenario-card p { font-size: 11px; color: var(--text2); line-height: 1.5; margin-bottom: 10px; }
+  .impact-row { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text3); margin-bottom: 3px; }
+  .impact-val { font-weight: 600; color: var(--text); }
+
+  /* ═══════════════════════════════════════════
+     UC2 — RELEASE EXECUTION PLANNER
+  ═══════════════════════════════════════════ */
+  .phase-swimlane { overflow-x: auto; }
+  .swimlane-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+  .swimlane-table th { background: var(--text); color: white; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 10px 12px; text-align: center; border: 1px solid #333; }
+  .swimlane-table th.row-hdr { background: var(--surface2); color: var(--text2); font-family: 'DM Sans', sans-serif; font-weight: 600; text-align: left; }
+  .swimlane-table td { border: 1px solid var(--border); padding: 7px 10px; vertical-align: top; font-size: 11.5px; }
+  .swimlane-table td.row-hdr { background: var(--surface2); font-weight: 600; font-size: 11px; color: var(--text); white-space: nowrap; min-width: 130px; }
+  .phase-cell { border-radius: 6px; padding: 5px 8px; font-size: 11px; font-weight: 500; }
+  .phase-cell.active { background: var(--blue-bg); color: var(--accent); border: 1px solid #c0d4f8; }
+  .phase-cell.done { background: var(--green-bg); color: var(--green); border: 1px solid #b7e4cb; }
+  .phase-cell.blocked { background: var(--red-bg); color: var(--red); border: 1px solid #f5c6c2; }
+  .phase-cell.pending { background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
+  .phase-cell.risk { background: var(--yellow-bg); color: var(--yellow); border: 1px solid #f8d77a; }
+  .phase-wk { font-size: 9.5px; opacity: 0.75; display: block; margin-top: 2px; }
+
+  /* RACI */
+  .raci-wrap { overflow-x: auto; }
+  .raci-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+  .raci-table th { background: var(--surface2); font-size: 10px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; padding: 7px 10px; border: 1px solid var(--border); text-align: center; }
+  .raci-table th.ws { text-align: left; min-width: 130px; }
+  .raci-table td { border: 1px solid var(--border); padding: 7px 10px; text-align: center; font-size: 12px; font-weight: 600; }
+  .raci-table td.ws { text-align: left; font-size: 11px; font-weight: 500; background: var(--surface2); color: var(--text); }
+  .raci-R { color: var(--accent); }
+  .raci-A { color: var(--green); }
+  .raci-C { color: var(--yellow); }
+  .raci-I { color: var(--text3); }
+  .raci-gap { color: var(--red); font-size: 14px; }
+  .raci-tbd { color: var(--text3); font-size: 10px; }
+
+  /* Risk register */
+  .risk-row { display: grid; grid-template-columns: 24px 1fr 80px 110px 120px 80px; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 11.5px; }
+  .risk-row:last-child { border-bottom: none; }
+  .risk-row.header { background: var(--surface2); font-size: 10px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; border-radius: 6px 6px 0 0; padding: 7px 12px; }
+  .risk-sev { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Corrective feed */
+  .corr-item { display: flex; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border); align-items: flex-start; }
+  .corr-item:last-child { border-bottom: none; }
+  .corr-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+  .corr-icon.auto { background: var(--green-bg); }
+  .corr-icon.needs { background: var(--yellow-bg); }
+  .corr-body { flex: 1; }
+  .corr-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+  .corr-desc { font-size: 11px; color: var(--text2); line-height: 1.5; }
+  .corr-actions { display: flex; gap: 6px; margin-top: 7px; }
+  .corr-tag { font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 1px 7px; border-radius: 10px; }
+  .corr-tag.auto { background: var(--green-bg); color: var(--green); }
+  .corr-tag.needs { background: var(--yellow-bg); color: var(--yellow); }
+
+  /* ═══════════════════════════════════════════
+     UC3 — SCRUM COMMAND CENTER
+  ═══════════════════════════════════════════ */
+  .kanban { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .kanban-col { background: var(--surface2); border-radius: var(--radius); padding: 10px; min-height: 200px; }
+  .kanban-col-title { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text2); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .kanban-count { background: var(--border); border-radius: 10px; padding: 1px 7px; font-size: 10px; }
+  .k-card { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 9px 11px; margin-bottom: 7px; cursor: pointer; transition: box-shadow 0.15s; box-shadow: var(--shadow); }
+  .k-card:hover { box-shadow: var(--shadow-lg); }
+  .k-card.p0 { border-left: 3px solid var(--red); animation: p0flash 2s infinite; }
+  @keyframes p0flash { 0%,100%{border-color: var(--red)} 50%{border-color: #ff8070} }
+  .k-card-title { font-size: 11.5px; font-weight: 600; margin-bottom: 5px; color: var(--text); }
+  .k-card-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .k-days { font-size: 10px; color: var(--text3); }
+  .k-owner { font-size: 10px; color: var(--text2); background: var(--surface2); border-radius: 10px; padding: 1px 7px; }
+
+  /* Burndown */
+  .burndown-wrap { position: relative; height: 130px; }
+  canvas#burndown { width: 100%; height: 100%; }
+
+  /* Capacity bars */
+  .cap-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .cap-name { font-size: 11px; width: 80px; color: var(--text2); flex-shrink: 0; }
+  .cap-bar-bg { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .cap-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+  .cap-pct { font-size: 10px; color: var(--text2); width: 32px; text-align: right; flex-shrink: 0; }
+
+  /* Env cards */
+  .env-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .env-card { border-radius: var(--radius); border: 1.5px solid var(--border); padding: 14px; background: var(--surface); }
+  .env-card.stable { border-color: #b7e4cb; }
+  .env-card.staged { border-color: #f8d77a; }
+  .env-card.critical { border-color: var(--red); animation: envPulse 1.5s infinite; }
+  @keyframes envPulse { 0%,100%{border-color:var(--red)} 50%{border-color:#ffb3aa} }
+  .env-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .env-name { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; }
+  .env-config-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
+  .env-config-row:last-of-type { border-bottom: none; }
+  .env-config-key { color: var(--text2); }
+  .env-config-val { font-weight: 600; color: var(--text); }
+  .env-stat { font-size: 10px; }
+
+  /* Rollout bar */
+  .rollout-wrap { margin-top: 12px; }
+  .rollout-label { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text2); margin-bottom: 5px; }
+  .rollout-bg { height: 10px; background: var(--surface2); border-radius: 5px; overflow: hidden; border: 1px solid var(--border); }
+  .rollout-fill { height: 100%; background: linear-gradient(90deg, var(--green), #2ecc71); border-radius: 5px; transition: width 1.5s ease; }
+
+  /* Activity feed */
+  .feed-item { display: flex; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border); align-items: flex-start; opacity: 0; animation: fadeIn 0.4s forwards; }
+  @keyframes fadeIn { to { opacity: 1; } }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+  .feed-time { font-size: 10px; color: var(--text3); white-space: nowrap; margin-top: 2px; }
+  .feed-body { flex: 1; }
+  .feed-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+  .feed-desc { font-size: 11px; color: var(--text2); line-height: 1.5; }
+  .feed-actions { display: flex; gap: 6px; margin-top: 7px; }
+
+  /* Thinking animation */
+  .thinking { display: flex; align-items: center; gap: 4px; padding: 8px 0; }
+  .thinking-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: think 1s infinite; }
+  .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes think { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+
+  /* Misc */
+  .section-gap { margin-bottom: 14px; }
+  .flex-row { display: flex; align-items: center; gap: 8px; }
+  .flex-between { display: flex; align-items: center; justify-content: space-between; }
+  .mt-10 { margin-top: 10px; }
+  .mt-14 { margin-top: 14px; }
+  .text-sm { font-size: 11px; color: var(--text2); }
+  .text-xs { font-size: 10px; color: var(--text3); }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+  .ai-label { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); background: var(--blue-bg); border-radius: 10px; padding: 2px 8px; }
+  .pill { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 12px; font-size: 10.5px; font-weight: 500; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 900px) {
+    .kpi-strip-5, .kpi-strip-8 { grid-template-columns: repeat(3, 1fr); }
+    .grid-2, .grid-3, .grid-60-40, .grid-40-60, .grid-65-35 { grid-template-columns: 1fr; }
+    .env-cards, .kanban { grid-template-columns: 1fr; }
+    .scenario-cards { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">PRISM</div>
+      <div class="logo-sub">Portfolio & Release Intelligence for Strategic Management</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="header-meta"><span class="pulse-dot"></span>Live · Azure Cloud Org · Q1 2026</span>
+    <span class="header-meta">TPM: Sarah Chen</span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('uc1')">🔮 OKR Oracle</div>
+  <div class="tab" onclick="switchTab('uc2')">🚀 Release Execution Planner</div>
+  <div class="tab" onclick="switchTab('uc3')">⚡ Scrum Command Center <span class="tab-badge">1 P0</span></div>
+</div>
+
+<div class="content">
+
+<!-- ═══════════════════════════════════════
+     UC1 — OKR ORACLE
+═══════════════════════════════════════ -->
+<div class="pane active" id="pane-uc1">
+
+  <!-- KPI Strip -->
+  <div class="kpi-strip kpi-strip-5 section-gap">
+    <div class="kpi"><div class="kpi-label">Portfolio Health</div><div class="kpi-value" id="ph-score">91%</div><div class="kpi-sub">↑ 3pts from last quarter</div></div>
+    <div class="kpi red"><div class="kpi-label">Programs At Risk</div><div class="kpi-value" id="ph-risk">3</div><div class="kpi-sub">of 18 total programs</div></div>
+    <div class="kpi yellow"><div class="kpi-label">Cross-Team Conflicts</div><div class="kpi-value" id="ph-conflicts">2</div><div class="kpi-sub">Active · needs resolution</div></div>
+    <div class="kpi"><div class="kpi-label">Business Value at Risk</div><div class="kpi-value red" id="ph-bvr" style="font-size:17px">$340M</div><div class="kpi-sub">Est. if slippage occurs</div></div>
+    <div class="kpi"><div class="kpi-label">Silicon Coverage</div><div class="kpi-value" style="font-size:13px; margin-top:2px">🟢 Intel &nbsp;🟡 AMD &nbsp;🔴 MAIA</div><div class="kpi-sub">Investment balance</div></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="roadmap-controls">
+    <div class="toggle-group">
+      <button class="toggle-btn active" onclick="setView('grouped',this)">Grouped View</button>
+      <button class="toggle-btn" onclick="setView('flat',this)">Flat View</button>
+    </div>
+    <select class="scenario-select" onchange="runScenario(this.value)">
+      <option value="">⚡ What-If Simulator — pick a scenario</option>
+      <option value="customer">🏢 Strategic Customer: Contoso $200M deal — needs dedicated AKS Q2 2026</option>
+      <option value="security">🔒 Security Hotfix: Zero-day CVE in Azure Boot — mandatory patch in 4 weeks</option>
+      <option value="tech">🆕 New Technology: MAIA 2.0 silicon ready 6 months early — accelerate AI Foundry</option>
+    </select>
+    <button class="btn btn-secondary btn-sm" onclick="resetRoadmap()">↺ Reset</button>
+    <span class="text-xs" id="scenario-label"></span>
+  </div>
+
+  <div class="grid-65-35 section-gap">
+    <!-- Roadmap -->
+    <div class="card" style="padding:14px">
+      <div class="card-title">📅 Multi-Year OKR Roadmap · 2025–2028
+        <span class="text-xs" style="margin-left:auto; font-weight:400">Click any bar for dependency map →</span>
+      </div>
+      <div class="roadmap-wrap">
+        <table class="roadmap-table" id="roadmap-table">
+          <!-- Built by JS -->
+        </table>
+      </div>
+      <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap">
+        <span class="text-xs">🟢 On Track</span>
+        <span class="text-xs">🟡 At Risk</span>
+        <span class="text-xs">🔴 Conflict</span>
+        <span class="text-xs">🔵 Planned</span>
+        <span class="text-xs">⬜ Future</span>
+      </div>
+    </div>
+
+    <!-- Right column: dep graph + oracle -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card" style="padding:14px">
+        <div class="card-title">🕸️ Dependency Map
+          <span class="text-xs" style="margin-left:auto;font-weight:400" id="dep-title">Select a program</span>
+        </div>
+        <div id="dep-graph" style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px">
+          ← Click any roadmap bar to explore dependencies
+        </div>
+      </div>
+
+      <div class="card" style="padding:14px">
+        <div class="card-title">🔮 OKR Oracle <span class="ai-label">AI</span></div>
+        <div class="oracle-box">
+          <textarea class="oracle-prompt" id="uc1-prompt" rows="3" placeholder="Ask the Oracle... e.g. 'Show me the 2027 storage offload program. Flag conflicts with the ML Foundry timeline and suggest two reprioritization options.'">Show me the 2027 storage offload program. Pull in all dependencies from hypervisor, networking, and silicon teams. Flag any conflicts with the ML Foundry timeline and suggest two reprioritization options.</textarea>
+          <div class="flex-row">
+            <button class="btn btn-primary btn-sm" onclick="runOracle('uc1')">▶ Run Oracle</button>
+            <button class="btn btn-secondary btn-sm" onclick="clearOracle('uc1')">Clear</button>
+          </div>
+          <div class="oracle-response" id="uc1-response"></div>
+          <div class="scenario-cards" id="uc1-scenarios" style="display:none">
+            <div class="scenario-card">
+              <h4>📋 Scenario A — Defer ML Foundry H2</h4>
+              <p>Shift ML Foundry GA from Q3 to Q4 2026. Frees 12 engineers for Storage Offload crunch. Minimal customer impact — only 3 preview customers affected.</p>
+              <div class="impact-row"><span>Timeline slip</span><span class="impact-val">+6 weeks</span></div>
+              <div class="impact-row"><span>Teams affected</span><span class="impact-val">2 of 7</span></div>
+              <div class="impact-row"><span>Revenue risk</span><span class="impact-val">$40M (low)</span></div>
+              <div class="impact-row"><span>Confidence</span><span class="impact-val" style="color:var(--green)">87%</span></div>
+              <button class="btn btn-success btn-sm mt-10" onclick="approveScenario('A')">✓ Approve Scenario A</button>
+            </div>
+            <div class="scenario-card">
+              <h4>📋 Scenario B — Reduce Storage Scope 20%</h4>
+              <p>Descope hot-tier storage rebalancing. Keep ML Foundry on track. Defer descoped features to H1 2027. Impacts 1 strategic customer SLA.</p>
+              <div class="impact-row"><span>Timeline slip</span><span class="impact-val">0 weeks</span></div>
+              <div class="impact-row"><span>Teams affected</span><span class="impact-val">1 of 7</span></div>
+              <div class="impact-row"><span>Revenue risk</span><span class="impact-val">$120M (med)</span></div>
+              <div class="impact-row"><span>Confidence</span><span class="impact-val" style="color:var(--yellow)">71%</span></div>
+              <button class="btn btn-secondary btn-sm mt-10" onclick="approveScenario('B')">✓ Approve Scenario B</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     UC2 — RELEASE EXECUTION PLANNER
+═══════════════════════════════════════ -->
+<div class="pane" id="pane-uc2">
+
+  <!-- KPI strip -->
+  <div class="kpi-strip kpi-strip-5 section-gap">
+    <div class="kpi"><div class="kpi-label">Feature</div><div class="kpi-value" style="font-size:14px;margin-top:3px">Storage Offload v3</div><div class="kpi-sub">Target GA: Wk 10 · Q2 2026</div></div>
+    <div class="kpi yellow"><div class="kpi-label">Layers Touched</div><div class="kpi-value">11</div><div class="kpi-sub">Firmware to Platform</div></div>
+    <div class="kpi red"><div class="kpi-label">RACI Gaps</div><div class="kpi-value">4</div><div class="kpi-sub">Unaligned teams</div></div>
+    <div class="kpi red"><div class="kpi-label">Circular Deps</div><div class="kpi-value">1</div><div class="kpi-sub">Platform ↔ IaC</div></div>
+    <div class="kpi yellow"><div class="kpi-label">Est. Cost Risk</div><div class="kpi-value" style="font-size:16px">+$180K</div><div class="kpi-sub">vs. approved budget</div></div>
+  </div>
+
+  <!-- Phase swimlanes + dependency graph -->
+  <div class="grid-60-40 section-gap">
+    <div class="card" style="padding:14px">
+      <div class="card-title">🏊 Execution Phases · All Infrastructure Layers</div>
+      <div class="phase-swimlane">
+        <table class="swimlane-table" id="phase-table">
+          <!-- Built by JS -->
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="padding:14px">
+      <div class="card-title">🕸️ Dependency Graph <span class="ai-label">AI-Scanned</span>
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <button class="btn btn-secondary btn-sm" onclick="setDepFilter('all',this)" style="background:var(--accent);color:white">All</button>
+          <button class="btn btn-secondary btn-sm" onclick="setDepFilter('circular',this)">Circular</button>
+          <button class="btn btn-secondary btn-sm" onclick="setDepFilter('critical',this)">Critical Path</button>
+        </div>
+      </div>
+      <div id="dep-graph-uc2" style="height:280px"></div>
+      <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
+        <span class="text-xs">🟣 IaC</span><span class="text-xs">🔵 Infra</span><span class="text-xs">🟢 Software</span><span class="text-xs">🟡 Platform</span><span class="text-xs">🔴 Security</span><span class="text-xs">⚪ DCOps</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RACI + Risk + Corrective -->
+  <div class="grid-2 section-gap">
+    <div class="card" style="padding:14px">
+      <div class="card-title">👥 RACI Matrix <span class="ai-label">AI-Generated</span>
+        <span class="text-xs" style="margin-left:auto;font-weight:400">❓ = Not Aligned · — = TBD</span>
+      </div>
+      <div class="raci-wrap">
+        <table class="raci-table" id="raci-table">
+          <!-- Built by JS -->
+        </table>
+      </div>
+      <div class="mt-10" style="background:var(--red-bg);border:1px solid #f5c6c2;border-radius:7px;padding:10px 12px;font-size:11.5px;color:var(--red)">
+        ⚠️ <strong>AI Insight:</strong> Networking team has no R or A assignment for IaC Provisioning. Circular dependency detected: Platform ↔ IaC. Auto-drafting corrective action.
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card" style="padding:14px">
+        <div class="card-title">🚨 Risk Register</div>
+        <div class="risk-row header">
+          <span></span><span>Risk</span><span>Severity</span><span>Impact</span><span>Owner</span><span>Status</span>
+        </div>
+        <div class="risk-row">
+          <div class="risk-sev" style="background:var(--red)"></div>
+          <span style="font-size:11px">Security gate not started</span>
+          <span><span class="badge badge-red">High</span></span>
+          <span style="font-size:11px">GA slip +2wks</span>
+          <span style="font-size:11px">SecEng Lead</span>
+          <span><span class="badge badge-red">Open</span></span>
+        </div>
+        <div class="risk-row">
+          <div class="risk-sev" style="background:#e6a817"></div>
+          <span style="font-size:11px">Networking RACI gap</span>
+          <span><span class="badge badge-yellow">Med</span></span>
+          <span style="font-size:11px">IaC blocked</span>
+          <span style="font-size:11px">TPM</span>
+          <span><span class="badge badge-yellow">Auto-drafted</span></span>
+        </div>
+        <div class="risk-row">
+          <div class="risk-sev" style="background:#e6a817"></div>
+          <span style="font-size:11px">Circular dep: Platform↔IaC</span>
+          <span><span class="badge badge-yellow">Med</span></span>
+          <span style="font-size:11px">Build loop</span>
+          <span style="font-size:11px">Arch Board</span>
+          <span><span class="badge badge-yellow">Pending</span></span>
+        </div>
+        <div class="risk-row">
+          <div class="risk-sev" style="background:#e6a817"></div>
+          <span style="font-size:11px">Cost overrun estimate</span>
+          <span><span class="badge badge-yellow">Med</span></span>
+          <span style="font-size:11px">+$180K vs plan</span>
+          <span style="font-size:11px">Finance/TPM</span>
+          <span><span class="badge badge-blue">Suggested</span></span>
+        </div>
+      </div>
+
+      <div class="card" style="padding:14px">
+        <div class="card-title">🤖 Corrective Actions <span class="ai-label">AI</span></div>
+        <div class="corr-item">
+          <div class="corr-icon auto">🤖</div>
+          <div class="corr-body">
+            <div class="corr-title">1A — AUTO-FIXED <span class="corr-tag auto">Auto</span></div>
+            <div class="corr-desc">Networking inserted into RACI for IaC Provisioning (Consulted). Azure Boards ticket #7821 updated. Slack sent to @net-infra-team.</div>
+          </div>
+        </div>
+        <div class="corr-item">
+          <div class="corr-icon auto">🤖</div>
+          <div class="corr-body">
+            <div class="corr-title">1A — AUTO-FIXED <span class="corr-tag auto">Auto</span></div>
+            <div class="corr-desc">Dependency graph updated. IaC module ownership reassigned from Platform to Infra team to break circular dependency.</div>
+          </div>
+        </div>
+        <div class="corr-item">
+          <div class="corr-icon needs">⚠️</div>
+          <div class="corr-body">
+            <div class="corr-title">1B — NEEDS APPROVAL <span class="corr-tag needs">Approval</span></div>
+            <div class="corr-desc">Security gate must start by Wk 4 to avoid GA slip. Recommend escalating to CISO and pulling in SecEng 2 weeks early.</div>
+            <div class="corr-actions">
+              <button class="btn btn-success btn-sm" onclick="approveAction(this)">✓ Approve</button>
+              <button class="btn btn-secondary btn-sm" onclick="this.closest('.corr-item').style.opacity='0.4'">Dismiss</button>
+            </div>
+          </div>
+        </div>
+        <div class="corr-item">
+          <div class="corr-icon needs">⚠️</div>
+          <div class="corr-body">
+            <div class="corr-title">1B — NEEDS APPROVAL <span class="corr-tag needs">Approval</span></div>
+            <div class="corr-desc">Defer Platform quota bump to Wk 9 (from Wk 6) to reduce cost by $180K. No customer impact on current plan.</div>
+            <div class="corr-actions">
+              <button class="btn btn-success btn-sm" onclick="approveAction(this)">✓ Approve</button>
+              <button class="btn btn-secondary btn-sm" onclick="this.closest('.corr-item').style.opacity='0.4'">Dismiss</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     UC3 — SCRUM COMMAND CENTER
+═══════════════════════════════════════ -->
+<div class="pane" id="pane-uc3">
+
+  <!-- KPI Strip -->
+  <div class="kpi-strip kpi-strip-8 section-gap">
+    <div class="kpi"><div class="kpi-label">Sprint</div><div class="kpi-value" style="font-size:14px">S23 · D3</div><div class="kpi-sub">Day 3 of 10</div></div>
+    <div class="kpi yellow"><div class="kpi-label">Velocity</div><div class="kpi-value">84%</div><div class="kpi-sub">of commitment</div></div>
+    <div class="kpi red"><div class="kpi-label">Blockers</div><div class="kpi-value" id="blocker-count">2</div><div class="kpi-sub">Active</div></div>
+    <div class="kpi red"><div class="kpi-label">P0 Issues</div><div class="kpi-value" id="p0-count">1</div><div class="kpi-sub">Customer-impacting</div></div>
+    <div class="kpi yellow"><div class="kpi-label">Capacity Used</div><div class="kpi-value">78%</div><div class="kpi-sub">6 eng on hotfix</div></div>
+    <div class="kpi green"><div class="kpi-label">Env A</div><div class="kpi-value" style="font-size:13px">🟢 Stable</div><div class="kpi-sub">BKC 4.8.1</div></div>
+    <div class="kpi yellow"><div class="kpi-label">Env B</div><div class="kpi-value" style="font-size:13px" id="envb-status">🟡 Staged</div><div class="kpi-sub">Hotfix pending</div></div>
+    <div class="kpi red"><div class="kpi-label">Customer Risk</div><div class="kpi-value" style="font-size:13px">🔴 1</div><div class="kpi-sub">Contoso blocked</div></div>
+  </div>
+
+  <!-- Simulate button -->
+  <div class="flex-between section-gap">
+    <div class="flex-row">
+      <span class="card-title" style="margin:0">📋 Sprint S23 — Storage Offload v3</span>
+      <span class="badge badge-red">P0 Active</span>
+    </div>
+    <button class="btn btn-danger" onclick="triggerSimulation()" id="sim-btn">⚡ Simulate: Customer Impact Event</button>
+  </div>
+
+  <div class="grid-65-35 section-gap">
+    <!-- Left: Kanban + metrics -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card" style="padding:14px">
+        <div class="card-title">📊 Sprint Board</div>
+        <div class="kanban" id="kanban-board">
+          <!-- Built by JS -->
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card" style="padding:14px">
+          <div class="card-title">📉 Burndown</div>
+          <canvas id="burndown" width="400" height="130"></canvas>
+        </div>
+        <div class="card" style="padding:14px">
+          <div class="card-title">👥 Team Capacity</div>
+          <div id="capacity-bars"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Env health + feed -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card" style="padding:14px">
+        <div class="card-title">🖥️ Environment Health</div>
+        <div class="env-cards">
+          <div class="env-card stable" id="env-a-card">
+            <div class="env-header">
+              <span class="env-name">ENV A</span>
+              <span class="badge badge-green">● Stable</span>
+            </div>
+            <div class="env-config-row"><span class="env-config-key">BKC Version</span><span class="env-config-val">v4.8.1</span></div>
+            <div class="env-config-row"><span class="env-config-key">Build</span><span class="env-config-val">#4819</span></div>
+            <div class="env-config-row"><span class="env-config-key">Intel Driver</span><span class="env-config-val" style="color:var(--green)">✅ v2.3.0</span></div>
+            <div class="env-config-row"><span class="env-config-key">AKS Node</span><span class="env-config-val" style="color:var(--green)">✅ 1.29.2</span></div>
+            <div class="env-config-row"><span class="env-config-key">Network Fabric</span><span class="env-config-val" style="color:var(--green)">✅ RoCEv2</span></div>
+            <div class="env-config-row"><span class="env-config-key">Customers Live</span><span class="env-config-val">847</span></div>
+            <div class="env-config-row"><span class="env-config-key">Uptime</span><span class="env-config-val" style="color:var(--green)">99.97%</span></div>
+          </div>
+          <div class="env-card staged" id="env-b-card">
+            <div class="env-header">
+              <span class="env-name">ENV B</span>
+              <span class="badge badge-yellow" id="envb-badge">🔄 Staged</span>
+            </div>
+            <div class="env-config-row"><span class="env-config-key">BKC Version</span><span class="env-config-val">v4.8.1</span></div>
+            <div class="env-config-row"><span class="env-config-key">Build</span><span class="env-config-val" id="envb-build">#4821-hf</span></div>
+            <div class="env-config-row"><span class="env-config-key">Intel Driver</span><span class="env-config-val" id="envb-driver" style="color:var(--yellow)">🔄 v2.3.1-hf</span></div>
+            <div class="env-config-row"><span class="env-config-key">AKS Node</span><span class="env-config-val" style="color:var(--green)">✅ 1.29.2</span></div>
+            <div class="env-config-row"><span class="env-config-key">Network Fabric</span><span class="env-config-val" style="color:var(--green)">✅ RoCEv2</span></div>
+            <div class="env-config-row"><span class="env-config-key">Test Coverage</span><span class="env-config-val">94%</span></div>
+            <div class="env-config-row"><span class="env-config-key">Customers</span><span class="env-config-val">0 (staged)</span></div>
+          </div>
+        </div>
+
+        <div class="rollout-wrap">
+          <div class="rollout-label">
+            <span>Env A (Prod · 100%)</span>
+            <span id="rollout-pct-label">Env B → Canary (0%)</span>
+          </div>
+          <div class="rollout-bg"><div class="rollout-fill" id="rollout-bar" style="width:0%"></div></div>
+          <div class="mt-10 flex-row">
+            <button class="btn btn-primary btn-sm" onclick="beginCanary()" id="canary-btn">▶ Begin 10% Canary Rollout</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:14px;flex:1">
+        <div class="card-title">🤖 AI Activity Feed <span class="ai-label">Live</span></div>
+        <div id="activity-feed" style="max-height:320px;overflow-y:auto">
+          <!-- Built by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+// ═══════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['uc1','uc2','uc3'][i]===id));
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('pane-'+id).classList.add('active');
+  if(id==='uc2' && !uc2Built) buildUC2();
+  if(id==='uc3' && !uc3Built) buildUC3();
+}
+
+// ═══════════════════════════════════════════════
+// UC1 — OKR ORACLE DATA & RENDER
+// ═══════════════════════════════════════════════
+const QUARTERS = ['Q1\'25','Q2\'25','Q3\'25','Q4\'25','Q1\'26','Q2\'26','Q3\'26','Q4\'26','Q1\'27','Q2\'27','Q3\'27','Q4\'27','Q1\'28','Q2\'28','Q3\'28','Q4\'28'];
+const NUM_Q = 16;
+
+const BUCKETS = [
+  {
+    id:'intel', label:'INTEL', color:'#1a56db',
+    lanes:[
+      { name:'Compute (HPC/VM)', programs:[
+        {name:'HPC Scale-Out v4',s:0,e:2,cls:'green'},{name:'VM Gen 7',s:4,e:7,cls:'yellow'},{name:'Confidential VMs',s:8,e:11,cls:'blue'},{name:'VM Gen 8',s:12,e:15,cls:'gray'}
+      ]},
+      { name:'Network Fabric', programs:[
+        {name:'RoCEv2 Phase 2',s:0,e:3,cls:'green'},{name:'SmartNIC v3',s:5,e:8,cls:'yellow'},{name:'Fabric 4.0',s:10,e:14,cls:'blue'}
+      ]},
+      { name:'Azure Boot', programs:[
+        {name:'Secure Boot v5',s:1,e:3,cls:'green'},{name:'Boot Telemetry',s:4,e:6,cls:'green'},{name:'Unified Boot Stack',s:9,e:12,cls:'blue'}
+      ]},
+      { name:'AKS (Intel)', programs:[
+        {name:'Node Autoprovisioning',s:0,e:2,cls:'green'},{name:'Confidential Nodes',s:4,e:6,cls:'yellow'},{name:'Multi-arch AKS',s:7,e:10,cls:'blue'}
+      ]}
+    ]
+  },
+  {
+    id:'amd', label:'AMD', color:'#d13438',
+    lanes:[
+      { name:'Compute (GPU/MI)', programs:[
+        {name:'MI300X Integration',s:2,e:5,cls:'red',conflict:true},{name:'GPU Fabric v2',s:6,e:9,cls:'yellow'},{name:'MI400 Roadmap',s:12,e:15,cls:'gray'}
+      ]},
+      { name:'Network Fabric', programs:[
+        {name:'RoCEv2 Offload',s:1,e:4,cls:'red',conflict:true},{name:'RDMA Scale-Out',s:6,e:8,cls:'yellow'},{name:'Fabric Fusion',s:11,e:14,cls:'blue'}
+      ]},
+      { name:'Azure Boot', programs:[
+        {name:'AMD Boot Stack',s:3,e:5,cls:'green'},{name:'PSP Integration',s:7,e:9,cls:'blue'}
+      ]},
+      { name:'AKS (AMD)', programs:[
+        {name:'GPU Node Pools',s:4,e:7,cls:'yellow'},{name:'AMD Confidential',s:9,e:12,cls:'blue'}
+      ]}
+    ]
+  },
+  {
+    id:'maia', label:'MAIA', color:'#107c10',
+    lanes:[
+      { name:'Azure Foundry', programs:[
+        {name:'Foundry MVP',s:3,e:6,cls:'yellow'},{name:'Foundry GA',s:6,e:8,cls:'yellow'},{name:'Foundry Enterprise',s:10,e:13,cls:'blue'}
+      ]},
+      { name:'Azure Fabric', programs:[
+        {name:'Fabric v1 Alpha',s:4,e:7,cls:'yellow'},{name:'Fabric v1 GA',s:8,e:10,cls:'blue'},{name:'Fabric v2',s:13,e:15,cls:'gray'}
+      ]},
+      { name:'AKS (MAIA)', programs:[
+        {name:'MAIA Node Pools',s:5,e:8,cls:'blue'},{name:'AI Inference Nodes',s:9,e:12,cls:'blue'}
+      ]},
+      { name:'Observability', programs:[
+        {name:'Unified Telemetry',s:0,e:3,cls:'green'},{name:'AI Ops Platform',s:5,e:8,cls:'yellow'},{name:'Predictive Alerts',s:10,e:14,cls:'blue'}
+      ]}
+    ]
+  }
+];
+
+let currentView = 'grouped';
+let roadmapState = 'normal';
+
+function buildRoadmap() {
+  const tbl = document.getElementById('roadmap-table');
+  let html = '<thead><tr><th style="min-width:140px;text-align:left">Team / Layer</th>';
+  QUARTERS.forEach(q => html += `<th>${q}</th>`);
+  html += '</tr></thead><tbody>';
+
+  if(currentView === 'grouped') {
+    BUCKETS.forEach(bucket => {
+      html += `<tr><td class="bucket-header" colspan="${NUM_Q+1}" style="background:${bucket.color}">${bucket.label} Architecture</td></tr>`;
+      bucket.lanes.forEach(lane => {
+        html += `<tr><td class="lane-label">${lane.name}</td>`;
+        for(let q=0; q<NUM_Q; q++) {
+          const prog = lane.programs.find(p => p.s <= q && q <= p.e);
+          if(prog && prog.s === q) {
+            const span = prog.e - prog.s + 1;
+            const conflict = prog.conflict ? ' conflict' : '';
+            html += `<td colspan="${span}"><div class="bar-wrap"><div class="rm-bar ${prog.cls}${conflict}" style="left:0;right:0" onclick="showDepGraph('${prog.name}')" title="${prog.name}">${prog.name}</div></div></td>`;
+            q = prog.e;
+          } else if(!prog) {
+            html += '<td></td>';
+          }
+        }
+        html += '</tr>';
+      });
+    });
+  } else {
+    // Flat: all lanes interleaved
+    BUCKETS.forEach(bucket => {
+      bucket.lanes.forEach(lane => {
+        html += `<tr><td class="lane-label"><span style="color:${bucket.color};font-size:9px;font-weight:700">${bucket.label}</span><br>${lane.name}</td>`;
+        for(let q=0; q<NUM_Q; q++) {
+          const prog = lane.programs.find(p => p.s <= q && q <= p.e);
+          if(prog && prog.s === q) {
+            const span = prog.e - prog.s + 1;
+            const conflict = prog.conflict ? ' conflict' : '';
+            html += `<td colspan="${span}"><div class="bar-wrap"><div class="rm-bar ${prog.cls}${conflict}" style="left:0;right:0" onclick="showDepGraph('${prog.name}')" title="${prog.name}">${prog.name}</div></div></td>`;
+            q = prog.e;
+          } else if(!prog) {
+            html += '<td></td>';
+          }
+        }
+        html += '</tr>';
+      });
+    });
+  }
+  html += '</tbody>';
+  tbl.innerHTML = html;
+}
+
+function setView(v, btn) {
+  currentView = v;
+  document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildRoadmap();
+}
+
+// Dependency graph (UC1)
+const DEP_DATA = {
+  'Storage Offload v3': { nodes: ['Storage Offload v3','Hypervisor NG','Network Fabric','AKS','ML Foundry','Silicon Opt','IaC Platform'], edges: [{s:0,t:1},{s:0,t:2},{s:0,t:3},{s:0,t:4,conflict:true},{s:0,t:5},{s:2,t:6},{s:4,t:2,conflict:true}] },
+  'MI300X Integration': { nodes: ['MI300X Integration','GPU Fabric v2','Network Fabric (AMD)','AKS AMD','Storage Backend','Perf Testing'], edges: [{s:0,t:1},{s:0,t:2},{s:1,t:2},{s:0,t:3},{s:0,t:4},{s:4,t:5},{s:3,t:4}] },
+  'default': { nodes: ['Selected Program','Team A','Team B','Team C','Downstream Svc','IaC'], edges: [{s:0,t:1},{s:0,t:2},{s:1,t:3},{s:2,t:3},{s:3,t:4},{s:4,t:5}] }
+};
+
+function showDepGraph(name) {
+  const data = DEP_DATA[name] || DEP_DATA['default'];
+  document.getElementById('dep-title').textContent = name;
+  const container = document.getElementById('dep-graph');
+  container.innerHTML = '';
+  drawForceGraph(container, data, 300, 200);
+}
+
+function drawForceGraph(container, data, w, h) {
+  const svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${w} ${h}`).attr('preserveAspectRatio','xMidYMid meet').style('width','100%').style('height','100%');
+  const nodes = data.nodes.map((n,i) => ({id:i, label:n}));
+  const links = data.edges.map(e => ({source:e.s, target:e.t, conflict:e.conflict||false}));
+  const sim = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d=>d.id).distance(70))
+    .force('charge', d3.forceManyBody().strength(-120))
+    .force('center', d3.forceCenter(w/2, h/2));
+  const link = svg.append('g').selectAll('line').data(links).join('line')
+    .attr('stroke', d => d.conflict ? '#c0392b' : '#c5c5bb').attr('stroke-width', d => d.conflict ? 2 : 1.5).attr('stroke-dasharray', d => d.conflict ? '5,3' : null);
+  const node = svg.append('g').selectAll('g').data(nodes).join('g').call(d3.drag().on('start', (e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y}).on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y}).on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
+  node.append('circle').attr('r', (d,i) => i===0 ? 14 : 9).attr('fill', (d,i) => i===0 ? '#1a56db' : '#e8e7e0').attr('stroke', (d,i) => i===0 ? '#0e3fa8' : '#c5c5bb').attr('stroke-width', 1.5);
+  node.append('text').attr('text-anchor','middle').attr('dy','0.35em').attr('font-size', (d,i)=>i===0?9:8).attr('fill',(d,i)=>i===0?'white':'#1a1a18').attr('font-family','DM Sans').text(d=>d.label.length>12?d.label.slice(0,11)+'…':d.label);
+  sim.on('tick', () => {
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    node.attr('transform', d=>`translate(${Math.max(14,Math.min(w-14,d.x))},${Math.max(14,Math.min(h-14,d.y))})`);
+  });
+}
+
+// What-If Simulator
+const SCENARIOS = {
+  customer: {
+    label: '🏢 Contoso $200M deal injected',
+    changes: [{bucket:'intel',lane:3,prog:{name:'Contoso AKS Cluster',s:4,e:7,cls:'red',conflict:true}}],
+    scoreHealth: '78%', scoreRisk: '6', scoreConflicts: '4', scoreBvr: '$520M',
+    oracleText: `SCENARIO ANALYSIS — Strategic Customer: Contoso $200M\n\n⚠️ Impact detected across 5 programs. Contoso requires dedicated AKS cluster by Q2 2026.\n\n• Intel AKS lane is fully committed — conflict with Multi-arch AKS (Q2-Q3 2026)\n• Network Fabric bandwidth allocation will need 15% reallocation\n• Storage Offload v3 shares IaC provisioning window — risk of 3-week delay\n• 2 engineering teams at 110%+ capacity if inserted as-is\n\nTwo reprioritization options generated below. ↓`
+  },
+  security: {
+    label: '🔒 Zero-day CVE in Azure Boot',
+    changes: [],
+    scoreHealth: '82%', scoreRisk: '5', scoreConflicts: '3', scoreBvr: '$280M',
+    oracleText: `SECURITY ALERT — Zero-Day CVE in Azure Boot Stack\n\nCVE-2026-18821 detected in Azure Boot v4.x. Mandatory patch required within 4 weeks across ALL silicon buckets.\n\n• Intel: Secure Boot v5 patch can be expedited — LOW disruption\n• AMD: AMD Boot Stack patch conflicts with PSP Integration sprint — MEDIUM risk\n• MAIA: No Azure Boot dependency — NOT AFFECTED\n• Estimated capacity cost: 8 engineer-weeks across 3 teams\n\nRecommendation: Pull patch into current sprint. Defer VM Gen 7 milestone by 2 weeks.`
+  },
+  tech: {
+    label: '🆕 MAIA 2.0 silicon ready early',
+    changes: [],
+    scoreHealth: '94%', scoreRisk: '2', scoreConflicts: '1', scoreBvr: '$180M',
+    oracleText: `OPPORTUNITY ANALYSIS — MAIA 2.0 Silicon Acceleration\n\nMAIA 2.0 tape-out succeeded 6 months ahead of schedule. Window to accelerate Azure Foundry GA from Q2 2027 to Q4 2026.\n\n✅ Azure Foundry Enterprise can pull forward by 2 quarters\n✅ AI Inference Nodes can begin Q3 2026 (was Q1 2027)\n⚠️ Requires 6 additional ML engineers — currently committed to ML Foundry\n⚠️ MAIA Fabric v1 must GA before Foundry acceleration — no slack in that path\n\nScenario A recommended: Accelerate Foundry, shift ML Foundry 1 quarter. Net business value gain: +$340M over plan.`
+  }
+};
+
+function runScenario(val) {
+  if(!val) return;
+  const s = SCENARIOS[val];
+  document.getElementById('scenario-label').textContent = s.label;
+  document.getElementById('ph-score').textContent = s.scoreHealth;
+  document.getElementById('ph-risk').textContent = s.scoreRisk;
+  document.getElementById('ph-conflicts').textContent = s.scoreConflicts;
+  document.getElementById('ph-bvr').textContent = s.scoreBvr;
+  buildRoadmap();
+  // Auto-trigger oracle
+  document.getElementById('uc1-prompt').value = s.oracleText.split('\n')[0];
+  typeResponse('uc1', s.oracleText, true);
+}
+
+function resetRoadmap() {
+  document.querySelector('.scenario-select').value = '';
+  document.getElementById('scenario-label').textContent = '';
+  document.getElementById('ph-score').textContent = '91%';
+  document.getElementById('ph-risk').textContent = '3';
+  document.getElementById('ph-conflicts').textContent = '2';
+  document.getElementById('ph-bvr').textContent = '$340M';
+  document.getElementById('uc1-scenarios').style.display = 'none';
+  const r = document.getElementById('uc1-response');
+  r.classList.remove('visible'); r.innerHTML = '';
+  buildRoadmap();
+}
+
+// Oracle typewriter
+function typeResponse(id, text, showScenarios) {
+  const box = document.getElementById(id+'-response');
+  box.classList.add('visible');
+  box.innerHTML = '<div class="thinking"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div>';
+  setTimeout(() => {
+    box.innerHTML = '<span class="ai-label">AI</span><br><br>';
+    let i = 0;
+    const cursor = document.createElement('span');
+    cursor.className = 'typing-cursor';
+    box.appendChild(cursor);
+    const iv = setInterval(() => {
+      if(i < text.length) {
+        cursor.insertAdjacentText('beforebegin', text[i]);
+        i++;
+        box.scrollTop = box.scrollHeight;
+      } else {
+        clearInterval(iv);
+        cursor.remove();
+        if(showScenarios) {
+          document.getElementById(id+'-scenarios').style.display = 'grid';
+        }
+      }
+    }, 14);
+  }, 1200);
+}
+
+function runOracle(id) {
+  const text = `ROADMAP ANALYSIS — 2027 Storage Offload Program\n\nScanning 18 programs · 3 silicon buckets · 12 dependency chains...\n\n⚠️ CONFLICTS DETECTED:\n• Storage Offload v3 (Q2 2026) ↔ ML Foundry Platform (Q3 2026) — shared networking bandwidth, IaC provisioning overlap\n• AMD RoCEv2 Offload flagged as high-risk: 6-week delay projected based on historical team velocity\n\n📊 PROGRAM HEALTH:\n• Hypervisor NG: ON TRACK — no conflicts\n• Network Fabric: AT RISK — 2 upstream blockers\n• Silicon Optimization: CONFLICT — timeline collision with MAIA Foundry\n\nTwo reprioritization options generated below. ↓`;
+  typeResponse(id, text, true);
+}
+
+function clearOracle(id) {
+  const r = document.getElementById(id+'-response');
+  r.classList.remove('visible'); r.innerHTML = '';
+  document.getElementById(id+'-scenarios').style.display = 'none';
+}
+
+function approveScenario(s) {
+  const ts = new Date().toLocaleTimeString();
+  alert(`✅ Scenario ${s} approved by Sarah Chen at ${ts}. Decision logged in Azure Boards. Roadmap update initiated.`);
+}
+
+// Init UC1
+buildRoadmap();
+
+// ═══════════════════════════════════════════════
+// UC2 — RELEASE EXECUTION PLANNER
+// ═══════════════════════════════════════════════
+let uc2Built = false;
+
+const LAYERS = ['Firmware','OS / Kernel','DCOps / DC Infra','IaC / Terraform','Storage Eng','Network Fabric','AKS / K8s','Platform Eng','Software SDK','Performance','Security / Compliance'];
+
+const PHASE_DATA = [
+  // [Phase1, Phase2, Phase3, Phase4, Phase5]
+  ['done','done','pending','pending','pending'],          // Firmware
+  ['done','active','pending','pending','pending'],        // OS / Kernel
+  ['done','active','risk','pending','pending'],           // DCOps
+  ['active','risk','pending','pending','pending'],        // IaC
+  ['done','active','active','pending','pending'],         // Storage Eng
+  ['done','done','pending','pending','pending'],          // Network Fabric
+  ['active','active','pending','pending','pending'],      // AKS
+  ['active','risk','pending','pending','pending'],        // Platform Eng
+  ['done','active','active','pending','pending'],         // Software SDK
+  ['pending','active','active','pending','pending'],      // Performance
+  ['pending','pending','blocked','pending','pending'],    // Security
+];
+
+const PHASE_LABELS = [
+  ['Infra Setup','Wk 1-2'],['Integration','Wk 3-4'],['Validation','Wk 5-6'],['Staging','Wk 7-8'],['GA Rollout','Wk 9-10']
+];
+
+const PHASE_TEXT = {
+  done: 'Complete ✓', active: 'In Progress', risk: 'At Risk ⚠️', blocked: 'Blocked 🔴', pending: '—'
+};
+
+const RACI_TEAMS = ['Storage Eng','Platform','SRE','SecEng','Networking','DCOps','Leadership'];
+const RACI_WS = ['IaC Provisioning','Firmware Update','OS Patching','Storage Config','Network Fabric','AKS Node Setup','Security Gate','Performance Test','Staging & Rollout','Monitoring','Sign-off / GA'];
+const RACI_DATA = [
+  // [Storage,Platform,SRE,SecEng,Networking,DCOps,Leadership]
+  ['C','R','I','I','❓','A','I'],
+  ['I','C','I','I','I','R','I'],
+  ['I','A','R','C','I','C','I'],
+  ['R','C','I','I','I','I','I'],
+  ['C','A','I','I','R','I','I'],
+  ['C','R','I','I','C','I','I'],
+  ['I','C','I','R','I','I','A'],
+  ['R','C','A','I','I','I','I'],
+  ['A','R','C','I','I','I','C'],
+  ['R','C','A','I','I','I','I'],
+  ['A','C','I','C','I','I','R'],
+];
+
+function buildUC2() {
+  uc2Built = true;
+  // Phase table
+  let h = '<thead><tr><th class="row-hdr">Layer</th>';
+  PHASE_LABELS.forEach(([l,w]) => h += `<th>${l}<br><span style="font-size:9px;opacity:0.7">${w}</span></th>`);
+  h += '</tr></thead><tbody>';
+  LAYERS.forEach((layer, li) => {
+    h += `<tr><td class="row-hdr">${layer}</td>`;
+    PHASE_DATA[li].forEach(cls => {
+      h += `<td><div class="phase-cell ${cls}">${PHASE_TEXT[cls]}</div></td>`;
+    });
+    h += '</tr>';
+  });
+  h += '</tbody>';
+  document.getElementById('phase-table').innerHTML = h;
+
+  // RACI table
+  let r = '<thead><tr><th class="ws">Workstream</th>';
+  RACI_TEAMS.forEach(t => r += `<th>${t}</th>`);
+  r += '</tr></thead><tbody>';
+  RACI_WS.forEach((ws, wi) => {
+    r += `<tr><td class="ws">${ws}</td>`;
+    RACI_DATA[wi].forEach(cell => {
+      let cls = cell==='R'?'raci-R':cell==='A'?'raci-A':cell==='C'?'raci-C':cell==='I'?'raci-I':cell==='❓'?'raci-gap':'raci-tbd';
+      r += `<td class="${cls}">${cell}</td>`;
+    });
+    r += '</tr>';
+  });
+  r += '</tbody>';
+  document.getElementById('raci-table').innerHTML = r;
+
+  // Dep graph UC2
+  const depData2 = {
+    nodes: ['Storage Offload v3','IaC/Terraform','Firmware','OS/Kernel','DCOps','Network Fabric','AKS','Platform','Security','Storage Eng','Performance'],
+    edges: [
+      {s:0,t:1},{s:0,t:9},{s:1,t:4,conflict:true},{s:1,t:7,conflict:true},{s:7,t:1,circular:true},
+      {s:2,t:3},{s:3,t:4},{s:0,t:5},{s:5,t:6},{s:6,t:7},{s:8,t:0},{s:9,t:10},{s:0,t:8}
+    ]
+  };
+  const c2 = document.getElementById('dep-graph-uc2');
+  c2.innerHTML = '';
+  drawForceGraph2(c2, depData2, 420, 280);
+}
+
+function drawForceGraph2(container, data, w, h) {
+  const colors = ['#1a56db','#7c3aed','#64748b','#0ea5e9','#6b7280','#0891b2','#f59e0b','#10b981','#ef4444','#22c55e','#f97316'];
+  const svg = d3.select(container).append('svg').attr('viewBox',`0 0 ${w} ${h}`).attr('preserveAspectRatio','xMidYMid meet').style('width','100%').style('height','100%');
+  const nodes = data.nodes.map((n,i) => ({id:i,label:n}));
+  const links = data.edges.map(e => ({source:e.s,target:e.t,conflict:e.conflict||false,circular:e.circular||false}));
+  const sim = d3.forceSimulation(nodes)
+    .force('link',d3.forceLink(links).id(d=>d.id).distance(80))
+    .force('charge',d3.forceManyBody().strength(-150))
+    .force('center',d3.forceCenter(w/2,h/2));
+  // Arrow markers
+  svg.append('defs').selectAll('marker').data(['normal','conflict']).join('marker')
+    .attr('id',d=>`arr-${d}`).attr('viewBox','0 -5 10 10').attr('refX',20).attr('refY',0).attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto')
+    .append('path').attr('d','M0,-5L10,0L0,5').attr('fill',d=>d==='conflict'?'#c0392b':'#c5c5bb');
+  const link = svg.append('g').selectAll('line').data(links).join('line')
+    .attr('stroke',d=>d.circular?'#ff6b35':d.conflict?'#c0392b':'#c5c5bb').attr('stroke-width',d=>d.conflict||d.circular?2:1.2)
+    .attr('stroke-dasharray',d=>d.circular?'8,4':d.conflict?'5,3':null).attr('marker-end',d=>d.conflict?'url(#arr-conflict)':'url(#arr-normal)');
+  const node = svg.append('g').selectAll('g').data(nodes).join('g').call(d3.drag().on('start',(e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y}).on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y}).on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
+  node.append('circle').attr('r',(d,i)=>i===0?16:10).attr('fill',(d,i)=>i===0?colors[0]:colors[i]||'#e8e7e0').attr('fill-opacity',0.85).attr('stroke','white').attr('stroke-width',1.5);
+  node.append('text').attr('text-anchor','middle').attr('dy','0.35em').attr('font-size',(d,i)=>i===0?8.5:7.5).attr('fill','white').attr('font-weight','600').attr('font-family','DM Sans').text(d=>d.label.length>10?d.label.slice(0,9)+'…':d.label);
+  // Circular dep badge
+  const circNodes = new Set(links.filter(l=>l.circular).flatMap(l=>[l.source.id||l.source,l.target.id||l.target]));
+  sim.on('tick',()=>{
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    node.attr('transform',d=>`translate(${Math.max(16,Math.min(w-16,d.x))},${Math.max(16,Math.min(h-16,d.y))})`);
+  });
+}
+
+let depFilter = 'all';
+function setDepFilter(f, btn) {
+  depFilter = f;
+  document.querySelectorAll('#pane-uc2 .btn-secondary').forEach(b=>b.style.background='');
+  document.querySelectorAll('#pane-uc2 .btn-secondary').forEach(b=>b.style.color='');
+  btn.style.background='var(--accent)'; btn.style.color='white';
+}
+
+function approveAction(btn) {
+  const item = btn.closest('.corr-item');
+  item.style.background = 'var(--green-bg)';
+  item.querySelector('.corr-actions').innerHTML = '<span class="badge badge-green">✓ Approved — Azure Boards updated</span>';
+}
+
+// ═══════════════════════════════════════════════
+// UC3 — SCRUM COMMAND CENTER
+// ═══════════════════════════════════════════════
+let uc3Built = false;
+let simTriggered = false;
+let rolloutPct = 0;
+
+const KANBAN_DATA = {
+  backlog: [
+    {title:'Storage quota API endpoint',owner:'@dev-alex',priority:'yellow',days:1},
+    {title:'IaC module refactor (Platform)',owner:'@dev-mei',priority:'gray',days:3},
+    {title:'AKS node pool config v2',owner:'@dev-raj',priority:'yellow',days:2},
+  ],
+  inprogress: [
+    {title:'Intel driver regression test',owner:'@dev-karan',priority:'red',days:4},
+    {title:'Storage offload SDK v3.2',owner:'@dev-priya',priority:'yellow',days:2},
+    {title:'Network fabric perf baseline',owner:'@dev-tom',priority:'gray',days:1},
+  ],
+  review: [
+    {title:'Hotfix #4821 — Intel driver v2.3.1',owner:'@dev-karan',priority:'red',days:1,p0:true},
+    {title:'Chaos test results — Env B',owner:'@dev-sam',priority:'yellow',days:1},
+  ],
+  done: [
+    {title:'BKC v4.8.1 pinned to Env A',owner:'@dev-mei',priority:'green',days:0},
+    {title:'IaC storage cluster provisioned',owner:'@dev-raj',priority:'green',days:0},
+    {title:'Security scan — Env A clean',owner:'@dev-sec',priority:'green',days:0},
+  ]
+};
+
+const CAPACITY = [
+  {name:'@dev-karan',pct:140,over:true},{name:'@dev-priya',pct:110,over:true},
+  {name:'@dev-alex',pct:80,over:false},{name:'@dev-mei',pct:75,over:false},
+  {name:'@dev-raj',pct:60,over:false},{name:'@dev-tom',pct:55,over:false},
+  {name:'@dev-sam',pct:90,over:false}
+];
+
+const INIT_FEED = [
+  {icon:'🤖',time:'08:02am',title:'AUTO-FIXED: BKC v4.8.1 pinned',desc:'Env A configuration locked to BKC v4.8.1. All node configs validated. 0 drift detected.',auto:true},
+  {icon:'🤖',time:'08:15am',title:'AUTO-ROUTED: Build #4821 flagged',desc:'Intel driver v2.3.1 regression detected in CI pipeline. Ticket #4821 auto-created. Assigned to @dev-karan.',auto:true},
+  {icon:'⚠️',time:'08:31am',title:'ESCALATION: Contoso onboarding at risk',desc:'23 Contoso VMs fail to boot due to driver #4821. SLA breach in 18hrs if unresolved. Customer engineering notified.',auto:false,actions:true},
+  {icon:'🟡',time:'08:44am',title:'RECOMMENDATION: Capacity reallocation',desc:'@dev-priya at 110% capacity. Story #2241 can be reassigned to @dev-alex (60% capacity, same skill set).',auto:false,actions:true},
+];
+
+function buildUC3() {
+  uc3Built = true;
+  buildKanban(KANBAN_DATA);
+  buildCapacity(CAPACITY);
+  buildBurndown();
+  buildFeed(INIT_FEED);
+}
+
+function buildKanban(data) {
+  const cols = [
+    {id:'backlog',label:'Backlog',items:data.backlog},
+    {id:'inprogress',label:'In Progress',items:data.inprogress},
+    {id:'review',label:'In Review',items:data.review},
+    {id:'done',label:'Done',items:data.done},
+  ];
+  let h = '';
+  cols.forEach(col => {
+    h += `<div class="kanban-col"><div class="kanban-col-title">${col.label}<span class="kanban-count">${col.items.length}</span></div>`;
+    col.items.forEach(card => {
+      const p0 = card.p0 ? ' p0' : '';
+      const dotCls = card.priority==='red'?'dot-red':card.priority==='yellow'?'dot-yellow':card.priority==='green'?'dot-green':'dot-gray';
+      h += `<div class="k-card${p0}"><div class="k-card-title"><span class="dot ${dotCls}"></span> ${card.title}${card.p0?' <span class="badge badge-red" style="font-size:9px">P0</span>':''}</div><div class="k-card-meta"><span class="k-owner">${card.owner}</span>${card.days>0?`<span class="k-days">${card.days}d</span>`:''}</div></div>`;
+    });
+    h += '</div>';
+  });
+  document.getElementById('kanban-board').innerHTML = h;
+}
+
+function buildCapacity(data) {
+  let h = '';
+  data.forEach(eng => {
+    const color = eng.over ? 'var(--red)' : eng.pct > 80 ? '#e6a817' : 'var(--green)';
+    const w = Math.min(eng.pct, 100);
+    h += `<div class="cap-row"><span class="cap-name">${eng.name}</span><div class="cap-bar-bg"><div class="cap-bar-fill" style="width:${w}%;background:${color}"></div></div><span class="cap-pct" style="color:${color}">${eng.pct}%</span></div>`;
+  });
+  document.getElementById('capacity-bars').innerHTML = h;
+}
+
+function buildBurndown() {
+  const canvas = document.getElementById('burndown');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * 2 || 400;
+  canvas.height = 260;
+  ctx.scale(2,2);
+  const W = canvas.width/2, H = canvas.height/2;
+  const pad = {t:10,r:10,b:20,l:30};
+  const cw = W-pad.l-pad.r, ch = H-pad.t-pad.b;
+  const ideal = [100,90,80,70,60,50,40,30,20,10,0];
+  const actual = [100,88,79,71,63,58,52,null,null,null,null];
+  const days = ideal.length;
+  ctx.fillStyle='#f5f4f1'; ctx.fillRect(0,0,W,H);
+  // Grid
+  ctx.strokeStyle='#e2e0d8'; ctx.lineWidth=0.5;
+  [0,25,50,75,100].forEach(v=>{
+    const y=pad.t+ch*(1-v/100);
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+cw,y); ctx.stroke();
+    ctx.fillStyle='#9a9a8e'; ctx.font='7px DM Sans'; ctx.textAlign='right';
+    ctx.fillText(v+'%',pad.l-3,y+2.5);
+  });
+  // Ideal line
+  ctx.beginPath(); ctx.strokeStyle='#c5c5bb'; ctx.lineWidth=1; ctx.setLineDash([4,2]);
+  ideal.forEach((v,i)=>{ const x=pad.l+cw*i/(days-1),y=pad.t+ch*(1-v/100); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }); ctx.stroke();
+  ctx.setLineDash([]);
+  // Actual line
+  ctx.beginPath(); ctx.strokeStyle='#1a56db'; ctx.lineWidth=1.5;
+  actual.forEach((v,i)=>{ if(v===null)return; const x=pad.l+cw*i/(days-1),y=pad.t+ch*(1-v/100); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }); ctx.stroke();
+  // Dots
+  actual.forEach((v,i)=>{ if(v===null)return; const x=pad.l+cw*i/(days-1),y=pad.t+ch*(1-v/100); ctx.beginPath(); ctx.arc(x,y,2.5,0,Math.PI*2); ctx.fillStyle='#1a56db'; ctx.fill(); });
+  // Labels
+  ctx.fillStyle='#9a9a8e'; ctx.font='7px DM Sans'; ctx.textAlign='center';
+  [1,3,5,7,9].forEach(i=>{ ctx.fillText('D'+(i+1),pad.l+cw*i/(days-1),H-5); });
+  // Legend
+  ctx.font='8px DM Sans'; ctx.textAlign='left';
+  ctx.strokeStyle='#c5c5bb'; ctx.lineWidth=1; ctx.setLineDash([3,2]); ctx.beginPath(); ctx.moveTo(pad.l,pad.t-2); ctx.lineTo(pad.l+16,pad.t-2); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#9a9a8e'; ctx.fillText('Ideal',pad.l+18,pad.t+1);
+  ctx.strokeStyle='#1a56db'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(pad.l+55,pad.t-2); ctx.lineTo(pad.l+71,pad.t-2); ctx.stroke();
+  ctx.fillStyle='#1a56db'; ctx.fillText('Actual',pad.l+73,pad.t+1);
+}
+
+function buildFeed(items) {
+  const feed = document.getElementById('activity-feed');
+  feed.innerHTML = '';
+  items.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'feed-item';
+    el.style.animationDelay = (i*0.1)+'s';
+    el.innerHTML = `
+      <div style="flex-shrink:0">
+        <div style="font-size:14px">${item.icon}</div>
+        <div class="feed-time">${item.time}</div>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title">${item.title} ${item.auto?'<span class="corr-tag auto">Auto</span>':'<span class="corr-tag needs">Action Needed</span>'}</div>
+        <div class="feed-desc">${item.desc}</div>
+        ${item.actions?`<div class="feed-actions"><button class="btn btn-success btn-sm" onclick="approveFeed(this)">✓ Approve</button><button class="btn btn-danger btn-sm" onclick="escalateFeed(this)">↑ Escalate to VP</button></div>`:''}
+      </div>`;
+    feed.appendChild(el);
+  });
+}
+
+function triggerSimulation() {
+  if(simTriggered) return;
+  simTriggered = true;
+  document.getElementById('sim-btn').disabled = true;
+  document.getElementById('sim-btn').textContent = '⚡ Simulation Running...';
+
+  // P0 card drops into kanban
+  const newCard = {title:'🔴 Driver Bug #4821 — Contoso VM boot failure',owner:'@dev-karan',priority:'red',days:0,p0:true};
+  KANBAN_DATA.inprogress.unshift(newCard);
+  buildKanban(KANBAN_DATA);
+
+  // Env B flips red
+  setTimeout(()=>{
+    const envB = document.getElementById('env-b-card');
+    envB.className = 'env-card critical';
+    document.getElementById('envb-badge').className = 'badge badge-red';
+    document.getElementById('envb-badge').textContent = '🔴 Critical';
+    document.getElementById('envb-status').textContent = '🔴 Critical';
+    document.getElementById('envb-build').textContent = '#4821 — FAIL';
+    document.getElementById('envb-driver').textContent = '❌ v2.3.1 — REGRESSION';
+    document.getElementById('envb-driver').style.color = 'var(--red)';
+    document.getElementById('p0-count').textContent = '2';
+    document.getElementById('blocker-count').textContent = '3';
+  }, 600);
+
+  // Feed populates
+  setTimeout(()=>{
+    const newFeed = [
+      {icon:'🔴',time:'Now',title:'P0 DETECTED: Intel driver regression in Build #4821',desc:'Driver v2.3.1 introduced VM boot failure. Contoso environment affected: 23 VMs offline. SLA breach in 18hrs.',auto:false,actions:true},
+      {icon:'🤖',time:'Now',title:'AUTO-FIXED: Hotfix branch auto-created',desc:'Branch hotfix/driver-4821-v2.3.2 created. Assigned to @dev-karan. Env B pinned to pre-regression BKC. CI triggered.',auto:true},
+      {icon:'🤖',time:'Now',title:'AUTO-FIXED: Dependency graph updated',desc:'AKS node pool config pinned to BKC v4.8.1. Storage offload staging paused pending driver resolution.',auto:true},
+      {icon:'⚠️',time:'Now',title:'APPROVAL NEEDED: Approve Env B canary rollout after soak',desc:'Hotfix ready for staged canary rollout to Env B (10%). 2hr soak recommended before full prod promotion.',auto:false,actions:true},
+      ...INIT_FEED
+    ];
+    buildFeed(newFeed);
+
+    // AI response
+    const oracleText = `INCIDENT ANALYSIS — P0 · Build #4821 · Intel Driver Regression\n\n🔍 Root cause: Intel driver v2.3.1 (introduced Fri 11:42pm) breaks UEFI boot on Gen 7 VM nodes.\n\n📊 Impact:\n• 23 Contoso VMs offline — customer onboarding blocked\n• SLA breach window: 18 hours from now\n• Env B: critical — do not promote to prod\n• Env A: stable on v2.3.0 — 847 customers unaffected\n\n✅ Automated actions taken:\n• Hotfix branch created, @dev-karan assigned\n• Env B config rolled back to BKC v4.8.1\n• CI pipeline triggered — ETA 45 min\n• Contoso TAM notified via Slack\n\n📋 Recommendation: Approve 10% canary rollout to Env B after 2hr soak. Promote to full prod if zero boot failures.`;
+    const box = document.getElementById('uc1-response');
+  }, 1000);
+
+  setTimeout(()=>{ document.getElementById('sim-btn').textContent = '✓ Simulation Complete'; }, 1500);
+}
+
+function beginCanary() {
+  rolloutPct = 0;
+  const bar = document.getElementById('rollout-bar');
+  const label = document.getElementById('rollout-pct-label');
+  const btn = document.getElementById('canary-btn');
+  btn.disabled = true; btn.textContent = '🔄 Rolling out...';
+  const iv = setInterval(()=>{
+    rolloutPct += 2;
+    bar.style.width = rolloutPct + '%';
+    label.textContent = `Env B → Canary (${rolloutPct}%)`;
+    if(rolloutPct >= 10) {
+      clearInterval(iv);
+      btn.textContent = '✅ 10% Canary Live — monitoring';
+      btn.className = 'btn btn-success btn-sm';
+      const envB = document.getElementById('env-b-card');
+      if(envB.className.includes('critical')) {
+        envB.className = 'env-card staged';
+        document.getElementById('envb-badge').className = 'badge badge-yellow';
+        document.getElementById('envb-badge').textContent = '🔄 10% Canary';
+      }
+    }
+  }, 80);
+}
+
+function approveFeed(btn) {
+  const item = btn.closest('.feed-item');
+  item.querySelector('.feed-actions').innerHTML = '<span class="badge badge-green">✓ Approved · logged in Azure Boards</span>';
+}
+function escalateFeed(btn) {
+  const item = btn.closest('.feed-item');
+  item.querySelector('.feed-actions').innerHTML = '<span class="badge badge-red">↑ Escalated to VP Engineering · Slack sent</span>';
+}
+
+</script>
+</body>
+</html>
